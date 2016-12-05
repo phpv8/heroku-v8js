@@ -24,6 +24,8 @@ git checkout ${dep_version}
 gclient sync
 
 export GYPFLAGS="-Dv8_use_external_startup_data=0"
+export GYPFLAGS="${GYPFLAGS} -Dlinux_use_bundled_gold=0"
+
 make native library=shared snapshot=on -j8
 
 # fix RPATH on libv8.so to not have lib.target/ in it
@@ -35,7 +37,7 @@ rm -rf ${OUT_PREFIX}/*
 mkdir -p ${OUT_PREFIX}/lib ${OUT_PREFIX}/include
 cp out/native/lib.target/lib*.so ${OUT_PREFIX}/lib/
 cp -R include/* ${OUT_PREFIX}/include/
-echo -e "create	${OUT_PREFIX}/lib/libv8_libplatform.a\naddlib out/native/obj.target/tools/gyp/libv8_libplatform.a\nsave\nend" | ar -M
+echo -e "create ${OUT_PREFIX}/lib/libv8_libplatform.a\naddlib out/native/obj.target/src/libv8_libplatform.a\nsave\nend" | ar -M
 popd
 
 echo "-----> Done."
