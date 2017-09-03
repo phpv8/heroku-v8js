@@ -6,7 +6,7 @@ set -xeo pipefail
 docker build --tag heroku-php-build-$stack --file $(pwd)/support/build/_docker/$stack.Dockerfile .
 
 dokku_run() {
-  docker run --env-file=env-file -e S3_PREFIX=dist-$stack-develop/ -e UPSTREAM_S3_PREFIX=dist-$stack-stable/ -it heroku-php-build-$stack $*
+  docker run --env-file=env-file -e STACK=$stack -e S3_PREFIX=dist-$stack-develop/ -e UPSTREAM_S3_PREFIX=dist-$stack-stable/ -it heroku-php-build-$stack $*
 }
 
 shipit() {
