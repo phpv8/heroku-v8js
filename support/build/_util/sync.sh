@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 
 set -eu
+set -o pipefail
+
+function s3cmd_get_progress() {
+	len=0
+	while read line; do
+		if [[ "$len" -gt 0 ]]; then
+			# repeat a backspace $len times
+			# need to use seq; {1..$len} doesn't work
+			printf '%0.s\b' $(seq 1 $len)
+		fi
+		echo -n "$line"
+		len=${#line}
+	done < <(grep --line-buffered -o -E '\[[0-9]+ of [0-9]+\]') # filter only the "[1 of 99]" bits from 's3cmd get' output
+}
 
 remove=true
 
@@ -63,11 +77,12 @@ trap 'rm -rf $src_tmp $dst_tmp;' EXIT
 echo -n "Fetching source's manifests from s3://${src_bucket}/${src_prefix}... " >&2
 (
 	cd $src_tmp
-	out=$(s3cmd --ssl get s3://${src_bucket}/${src_prefix}*.composer.json 2>&1) || { echo -e "failed! Error:\n$out" >&2; exit 1; }
-	ls *.composer.json 2>/dev/null 1>&2 || { echo "failed; no manifests found!" >&2; exit 1; }
 	out=$(s3cmd --ssl get s3://${src_bucket}/${src_prefix}packages.json 2>&1) || { echo -e "No packages.json in source repo:\n$out" >&2; exit 1; }
+	s3cmd --ssl --progress get s3://${src_bucket}/${src_prefix}*.composer.json 2>&1 | tee download.log | s3cmd_get_progress >&2 || { echo -e "failed! Error:\n$(cat download.log)" >&2; exit 1; }
+	ls *.composer.json 2>/dev/null 1>&2 || { echo "failed; no manifests found!" >&2; exit 1; }
+	rm download.log
 )
-echo "done." >&2
+echo "" >&2
 
 # this mkrepo.sh call won't actually download, but use the given *.composer.json, and echo a generated packages.json
 # we use this to compare to the downloaded packages.json
@@ -81,9 +96,10 @@ $here/mkrepo.sh $src_bucket $src_prefix ${src_tmp}/*.composer.json 2>/dev/null |
 echo -n "Fetching destination's manifests from s3://${dst_bucket}/${dst_prefix}... " >&2
 (
 	cd $dst_tmp
-	out=$(s3cmd --ssl get s3://${dst_bucket}/${dst_prefix}*.composer.json 2>&1) || { echo -e "failed! Error:\n$out" >&2; exit 1; }
+	s3cmd --ssl --progress get s3://${dst_bucket}/${dst_prefix}*.composer.json 2>&1 | tee download.log | s3cmd_get_progress >&2 || { echo -e "failed! Error:\n$(cat download.log)" >&2; exit 1; }
+	rm download.log
 )
-echo "done." >&2
+echo "" >&2
 
 comm=$(comm <(cd $src_tmp; ls -1 *.composer.json) <(cd $dst_tmp; ls -1 *.composer.json 2> /dev/null)) # comm produces three columns of output: entries only in left file, entries only in right file, entries in both
 add_manifests=$(echo "$comm" | grep '^\S' || true) # no tabs means output in col 1 = files only in src
@@ -94,7 +110,11 @@ ignore_manifests=()
 for filename in $common; do
 	result=0
 	python <(cat <<-'PYTHON' # beware of single quotes in body
-		import sys, json, os, datetime;
+		from __future__ import print_function
+		import sys, json, os, datetime
+		# for python 2+3 compat
+		def stderrprint(*args, **kwargs):
+		    print(*args, file=sys.stderr, **kwargs)
 		src_manifest = json.load(open(sys.argv[1]))
 		dst_manifest = json.load(open(sys.argv[2]))
 		# remove URLs so they don't interfere with comparison
@@ -105,12 +125,12 @@ for filename in $common; do
 		    src_time = datetime.datetime.strptime(src_manifest.pop("time"), "%Y-%m-%d %H:%M:%S") # UTC
 		except KeyError, ValueError:
 		    src_time = datetime.datetime.utcfromtimestamp(os.path.getmtime(sys.argv[1]))
-		    print >> sys.stderr, "WARNING: source manifest "+os.path.basename(sys.argv[1])+" has invalid time entry, using mtime: "+src_time.isoformat()
+		    stderrprint("WARNING: source manifest {} has invalid time entry, using mtime: {}".format(os.path.basename(sys.argv[1]), src_time.isoformat()))
 		try:
 		    dst_time = datetime.datetime.strptime(dst_manifest.pop("time"), "%Y-%m-%d %H:%M:%S") # UTC
 		except KeyError, ValueError:
 		    dst_time = datetime.datetime.utcfromtimestamp(os.path.getmtime(sys.argv[2]))
-		    print >> sys.stderr, "WARNING: destination manifest "+os.path.basename(sys.argv[2])+" has invalid time entry, using mtime: "+dst_time.isoformat()
+		    stderrprint("WARNING: destination manifest {} has invalid time entry, using mtime: {}".format(os.path.basename(sys.argv[2]), dst_time.isoformat()))
 		# a newer source time means we will copy
 		if src_time > dst_time:
 		    sys.exit(0)
@@ -208,7 +228,7 @@ for manifest in $add_manifests ${update_manifests[@]:-}; do
 		cp ${src_tmp}/${manifest} ${dst_tmp}/${manifest}
 	fi
 	echo -n "  - copying manifest file '$manifest'... " >&2
-	out=$(s3cmd ${AWS_ACCESS_KEY_ID+"--access_key=$AWS_ACCESS_KEY_ID"} ${AWS_SECRET_ACCESS_KEY+"--secret_key=$AWS_SECRET_ACCESS_KEY"} --ssl --acl-public put ${dst_tmp}/${manifest} s3://${dst_bucket}/${dst_prefix}${manifest} 2>&1) || { echo -e "failed! Error:\n$out" >&2; exit 1; }
+	out=$(s3cmd ${AWS_ACCESS_KEY_ID+"--access_key=$AWS_ACCESS_KEY_ID"} ${AWS_SECRET_ACCESS_KEY+"--secret_key=$AWS_SECRET_ACCESS_KEY"} --ssl --acl-public -m application/json put ${dst_tmp}/${manifest} s3://${dst_bucket}/${dst_prefix}${manifest} 2>&1) || { echo -e "failed! Error:\n$out" >&2; exit 1; }
 	echo "done." >&2
 done
 
