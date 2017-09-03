@@ -27,7 +27,6 @@ echo "-----> Building ${dep_package}..."
 curl -L ${dep_url} | tar xz
 
 pushd ${dep_dirname}
-export LD_LIBRARY_PATH=${OUT_PREFIX}/lib:${LD_LIBRARY_PATH}
 phpize
 ./configure \
     --prefix=${OUT_PREFIX} \
