@@ -31,8 +31,18 @@ phpize
 ./configure \
     --prefix=${OUT_PREFIX} \
     --with-v8js=${OUT_PREFIX}
+
+# link against libstdc++ also; required on Ubuntu Trusty environment
+sed -e 's/^V8JS_SHARED_LIBADD.*/& -lstdc++/' -i Makefile
+
 make -s -j 9
 # php was a build dep, and it's in $OUT_PREFIX. nuke that, then make install so all we're left with is the extension
+
+# run tests
+export NO_INTERACTION=1
+export REPORT_EXIT_STATUS=1
+make test
+
 rm -rf ${OUT_PREFIX}/*
 make install -s
 strip --strip-unneeded ${OUT_PREFIX}/lib/php/extensions/*/*.so
