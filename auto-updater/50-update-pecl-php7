@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -xeo pipefail
+
+tmp=`mktemp`
+wget -O$tmp https://pecl.php.net/package/v8js
+
+latest_version=$(
+	perl -ne 'if(m/v8js-(1\.\d+\.\d+)\.tgz/) { print "$1\n"; }' < $tmp \
+		| sort --version-sort \
+		| tail -n 1)
+echo "Latest PHP V8Js version   ----> $latest_version"
+
+for dir in support/build/extensions/no-debug-non-zts-20151012/ support/build/extensions/no-debug-non-zts-20160303/; do
+	pushd $dir
+		old_name="$(ls -1 v8js-bare-*)"
+		old_version="${old_name#v8js-bare-}"
+
+		if [ "$old_version" != "$latest_version" ]; then
+			git mv "v8js-$old_version" "v8js-$latest_version"
+			git mv "v8js-bare-$old_version" "v8js-bare-$latest_version"
+
+			sed -e "s/v8js-bare-$old_version/v8js-bare-$latest_version/g" -i "v8js-$latest_version"
+		fi
+	popd
+done
+
+git update-index -q --ignore-submodules --refresh
+git diff-index --quiet HEAD -- && {
+	echo ""
+	echo "Nothing changed."
+	exit 0
+}
+
+git commit -a -m "Update latest PECL v8js versions (php7 branch)"
+
+rm -f $tmp

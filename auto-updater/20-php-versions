@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+tmp=`mktemp`
+wget -O$tmp https://s3.amazonaws.com/lang-php/
+
+for php_dist in 5.5 5.6 7.0 7.1; do
+	echo "Processing PHP version  ----> $php_dist"
+	latest_version=$(
+	(
+	xmllint --shell $tmp <<EOF
+setns x=http://s3.amazonaws.com/doc/2006-03-01/
+xpath //x:Contents/x:Key[starts-with(text(), 'dist-cedar-14-stable/php-$php_dist') and not(contains(text(), '.json'))]/text()
+EOF
+	) \
+		| perl -ne 'if(/(php-\d+.\d+.\d+)\.tar\.gz/) { print "$1\n"; }' \
+		| sort --version-sort \
+		| tail -n 1
+	)
+
+	echo "latest version: $latest_version"
+	sed -e "s/php-$php_dist\.[0-9]\+/$latest_version/" -i support/build/extensions/no-debug-non-zts-*/v8js-bare-*
+done
+
+git update-index -q --ignore-submodules --refresh
+git diff-index --quiet HEAD -- && {
+	echo ""
+	echo "Nothing changed."
+	exit 0
+}
+
+git commit -a -m "Update latest PHP versions"
+
+rm -f $tmp
