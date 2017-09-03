@@ -21,6 +21,8 @@ EOF
 	sed -e "s/php-$php_dist\.[0-9]\+/$latest_version/" -i support/build/extensions/no-debug-non-zts-*/v8js-bare-*
 done
 
+rm -f $tmp
+
 git update-index -q --ignore-submodules --refresh
 git diff-index --quiet HEAD -- && {
 	echo ""
@@ -29,5 +31,3 @@ git diff-index --quiet HEAD -- && {
 }
 
 git commit -a -m "Update latest PHP versions"
-
-rm -f $tmp

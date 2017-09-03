@@ -24,6 +24,8 @@ for dir in support/build/extensions/no-debug-non-zts-20151012/ support/build/ext
 	popd
 done
 
+rm -f $tmp
+
 git update-index -q --ignore-submodules --refresh
 git diff-index --quiet HEAD -- && {
 	echo ""
@@ -32,5 +34,3 @@ git diff-index --quiet HEAD -- && {
 }
 
 git commit -a -m "Update latest PECL v8js versions (php7 branch)"
-
-rm -f $tmp
