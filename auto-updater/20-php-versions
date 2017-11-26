@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 tmp=`mktemp`
-wget -O$tmp https://s3.amazonaws.com/lang-php/
+wget -O$tmp 'https://s3.amazonaws.com/lang-php/?prefix=dist-cedar-14-stable/php-'
 
 for php_dist in 5.5 5.6 7.0 7.1; do
 	echo "Processing PHP version  ----> $php_dist"
