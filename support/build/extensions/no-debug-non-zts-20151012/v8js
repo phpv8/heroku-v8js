@@ -18,12 +18,6 @@ dep_name=$(basename $BASH_SOURCE)
 dep_version=${dep_formula##*"/${dep_name}-"}
 dep_package=ext-${dep_name}-${dep_version}
 case ${ZEND_MODULE_API_VERSION} in
-	20121212)
-		series=5.5
-		;;
-	20131226)
-		series=5.6
-		;;
 	20151012)
 		series=7.0
 		;;
