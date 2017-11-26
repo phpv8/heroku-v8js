@@ -5,7 +5,7 @@ tmp=`mktemp`
 wget -O$tmp https://pecl.php.net/package/v8js
 
 latest_version=$(
-	perl -ne 'if(m/v8js-(1\.\d+\.\d+)\.tgz/) { print "$1\n"; }' < $tmp \
+	perl -ne 'if(m/v8js-(2\.\d+\.\d+)\.tgz/) { print "$1\n"; }' < $tmp \
 		| sort --version-sort \
 		| tail -n 1)
 echo "Latest PHP V8Js version   ----> $latest_version"

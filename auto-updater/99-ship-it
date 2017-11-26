@@ -17,8 +17,8 @@ shipit libraries/v8
 
 
 for dir in no-debug-non-zts-20151012 no-debug-non-zts-20160303/; do
-  shipit `cd support/build/; ls -1 extensions/$dir/v8js-bare-1.*`
-  shipit `cd support/build/; ls -1 extensions/$dir/v8js-1.*`
+  shipit `cd support/build/; ls -1 extensions/$dir/v8js-bare-2.*`
+  shipit `cd support/build/; ls -1 extensions/$dir/v8js-2.*`
 done
 
 dokku_run support/build/_util/mkrepo.sh --upload
