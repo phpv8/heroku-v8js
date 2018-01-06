@@ -8,7 +8,7 @@ set -o pipefail
 # fail harder
 set -eux
 
-DEFAULT_VERSION="6.3.298"
+DEFAULT_VERSION="6.4.388.19"
 dep_version=${VERSION:-$DEFAULT_VERSION}
 dep_dirname=v8
 
