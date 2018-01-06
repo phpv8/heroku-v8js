@@ -1,25 +1,24 @@
 #!/usr/bin/env bash
-stack=$1; shift
-
 set -xeo pipefail
 
-docker build --tag heroku-php-build-$stack --file $(pwd)/support/build/_docker/$stack.Dockerfile .
+for stack in heroku-16 cedar-14; do
+  docker build --tag heroku-php-build-$stack --file $(pwd)/support/build/_docker/$stack.Dockerfile .
 
-dokku_run() {
-  docker run --env-file=env-file -e STACK=$stack -e S3_PREFIX=dist-$stack-develop/ -e UPSTREAM_S3_PREFIX=dist-$stack-stable/ -it heroku-php-build-$stack $*
-}
+  dokku_run() {
+    docker run --env-file=env-file -e STACK=$stack -e S3_PREFIX=dist-$stack-develop/ -e UPSTREAM_S3_PREFIX=dist-$stack-stable/ -it heroku-php-build-$stack $*
+  }
 
-shipit() {
-  dokku_run support/build/_util/deploy.sh --overwrite $*
-}
+  shipit() {
+    dokku_run support/build/_util/deploy.sh --overwrite $*
+  }
 
-shipit libraries/v8
+  shipit libraries/v8
 
+  for dir in no-debug-non-zts-20151012 no-debug-non-zts-20160303/; do
+    shipit `cd support/build/; ls -1 extensions/$dir/v8js-bare-2.*`
+    shipit `cd support/build/; ls -1 extensions/$dir/v8js-2.*`
+  done
 
-for dir in no-debug-non-zts-20151012 no-debug-non-zts-20160303/; do
-  shipit `cd support/build/; ls -1 extensions/$dir/v8js-bare-2.*`
-  shipit `cd support/build/; ls -1 extensions/$dir/v8js-2.*`
+  dokku_run support/build/_util/mkrepo.sh --upload
+  dokku_run support/build/_util/sync.sh heroku-v8js dist-$stack-stable/ 
 done
-
-dokku_run support/build/_util/mkrepo.sh --upload
-dokku_run support/build/_util/sync.sh heroku-v8js dist-$stack-stable/ 
