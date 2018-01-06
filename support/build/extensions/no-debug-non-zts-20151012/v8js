@@ -24,6 +24,9 @@ case ${ZEND_MODULE_API_VERSION} in
 	20160303)
 		series=7.1
 		;;
+	20170718)
+		series=7.2
+		;;
 	*)
 		echo unknown zend module api version: ${ZEND_MODULE_API_VERSION}
 		exit 2
