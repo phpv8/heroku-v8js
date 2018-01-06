@@ -14,7 +14,7 @@ for stack in heroku-16 cedar-14; do
 
   shipit libraries/v8
 
-  for dir in no-debug-non-zts-20151012 no-debug-non-zts-20160303/; do
+  for dir in no-debug-non-zts-20151012 no-debug-non-zts-20160303 no-debug-non-zts-20170718; do
     shipit `cd support/build/; ls -1 extensions/$dir/v8js-bare-2.*`
     shipit `cd support/build/; ls -1 extensions/$dir/v8js-2.*`
   done
